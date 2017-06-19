@@ -6,7 +6,7 @@
  */
 //require_once __DIR__ .'/_init.php';
 require_once dirname(__DIR__) . '/vendor/autoload.php';
-use Ost\Enum\StringUtils;
+use My\StringUtils;
 
 class AttachePackage
 {

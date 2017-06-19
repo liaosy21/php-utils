@@ -6,7 +6,7 @@
  * Time: 16:49
  */
 
-namespace Ost\Enum;
+namespace My;
 
 
 class StringUtils
@@ -435,6 +435,43 @@ class StringUtils
         $secs = $remain%60;
         $res = array("day" => $days,"hour" => $hours,"min" => $mins,"sec" => $secs);
         return $res;
+    }
+
+    /**
+     * 个性化显示时间
+     *
+     * @param $timeInt
+     * @param string $format
+     * @return string
+     */
+    public static function timeTran($timeInt, $format = 'Y-m-d H:i:s')
+    {
+        $d = time() - $timeInt;
+        if ($d < 0) {
+            return $timeInt;
+        } else {
+            if ($d < 60) {
+                return $d . ' 秒前';
+            } else {
+                if ($d < 3600) {
+                    return floor($d / 60) . ' 分钟前';
+                } else {
+                    if ($d < 86400) {
+                        return floor($d / 3600) . ' 小时前';
+                    } else {
+                        if ($d < 604800) {//7天内
+                            return floor($d / 86400) . ' 天前';
+                        } else {
+                            if ($d < 2592000) {//30天内
+                                return floor($d / 604800) . ' 周前';
+                            } else {
+                                return date($format, $timeInt);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     public static function arrayToObject($e)
