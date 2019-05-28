@@ -27,6 +27,27 @@ class StringUtils
     ]; /* 上传文件格式显示 */
 
     /**
+     * 获取UUID
+     * @return string
+     */
+    public static function uuid()
+    {
+        if (function_exists('com_create_guid')) {
+            return com_create_guid();
+        } else {
+            mt_srand((double)microtime() * 10000);//optional for php 4.2.0 and up.
+            $charid = strtoupper(md5(uniqid(rand(), true)));
+            $hyphen = chr(45);// "-"
+            $uuid = substr($charid, 0, 8) . $hyphen
+                . substr($charid, 8, 4) . $hyphen
+                . substr($charid, 12, 4) . $hyphen
+                . substr($charid, 16, 4) . $hyphen
+                . substr($charid, 20, 12);
+            return $uuid;
+        }
+    }
+
+    /**
      * 字符串str中是否包含子字符串needle
      *
      * @param $str
@@ -84,15 +105,83 @@ class StringUtils
         return substr($str, -strlen($needle)) === $needle;
     }
 
-    public static function subString($str, $limit)
+    /**
+     * 字符串截取
+     *
+     * @param $str
+     * @param $length
+     * @return string
+     */
+    public static function subStr($str, $length)
     {
-        if(! empty($str)) {
-            $strLen = mb_strlen($str, 'utf-8');
-            if ($strLen >= $limit && $strLen > 1) {
-                $str = mb_substr($str, 0, $limit - 1, 'utf-8') . "...";
-            }
+        if ($length > 0 && mb_strlen($str) > $length) {
+            $str = mb_substr($str, 0, $length) . '...';
         }
         return $str;
+    }
+
+    /**
+     * 获取交易单号
+     *
+     * @return string
+     */
+    public static function getTradeNo()
+    {
+        return date('YmdHis') . self::generateRandomString(6);
+    }
+
+    /**
+     * 验证是否是国内手机号码
+     * @param $mobile
+     * @return bool
+     */
+    public static function isMobile($mobile)
+    {
+        return !preg_match("/1[3456789]{1}\d{9}$/", $mobile) ? false : true;
+    }
+
+    /**
+     * 验证邮箱格式
+     *
+     * @param $mail
+     * @return mixed
+     */
+    public static function isMail($mail)
+    {
+        return filter_var($mail, FILTER_VALIDATE_EMAIL);
+    }
+
+    /**
+     * 生成N位纯数字验证码
+     *
+     * @param int $length
+     * @param string $chars
+     * @return string
+     */
+    public static function rand( $length= 4, $chars = '0123456789')
+    {
+        $hash = '';
+        $max = strlen($chars) - 1;
+        for ($i = 0; $i < $length; $i++) {
+            $hash .= $chars[mt_rand(0, $max)];
+        }
+        return $hash;
+    }
+
+    /**
+     * 从数字、大小写字母生成随机字符串,不包含数字1、0和字母：i,l,o,I,O，以免造成误会
+     * @param int $length 指定长度
+     * @return string
+     */
+    public static function generateRandomString($length)
+    {
+        $pattern = '23456789abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ';
+        $strLen = strlen($pattern);
+        $return_str = '';
+        for ($i = 0; $i < $length; $i++) {
+            $return_str .= $pattern{mt_rand(0, ($strLen - 1))}; //生成php随机数
+        }
+        return $return_str;
     }
 
     /**
@@ -357,20 +446,45 @@ class StringUtils
     }
 
     /**
-     * 获取客户端ip地址
-     * @return string 客户端ip
+     * 获取客户端IP
+     * @return string
      */
-    public static function getIP()
+    public static function getClientIP()
     {
-        global $ip;
-        if (getenv("HTTP_CLIENT_IP"))
-            $ip = getenv("HTTP_CLIENT_IP");
-        else if (getenv("HTTP_X_FORWARDED_FOR"))
-            $ip = getenv("HTTP_X_FORWARDED_FOR");
-        else if (getenv("REMOTE_ADDR"))
-            $ip = getenv("REMOTE_ADDR");
-        else $ip = "Unknow";
+        $ip = '';
+        if (isset($_SERVER["HTTP_X_FORWARDED_FOR"]) && strcasecmp($_SERVER["HTTP_X_FORWARDED_FOR"], "unknown")) {
+            $arr = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
+            $pos = array_search('unknown', $arr);
+            if (false !== $pos) unset($arr[$pos]);
+            $ip = trim($arr[0]);
+        }
+        if (isset($_SERVER["HTTP_CLIENT_IP"]) && strcasecmp($_SERVER["HTTP_CLIENT_IP"], "unknown")) {
+            $ip = $_SERVER["HTTP_CLIENT_IP"];
+        }
+        if (isset($_SERVER["REMOTE_ADDR"])) {
+            $ip = $_SERVER["REMOTE_ADDR"];
+        }
         return $ip;
+    }
+
+    /**
+     * 给url中添加参数，如有重发的key，会覆盖value
+     *
+     * @param $url
+     * @param $key
+     * @param $val
+     * @return string
+     */
+    public static function addUrlParam($url, $key, $val)
+    {
+        $tmpArr  = explode("?",$url);
+        $hostStr  = $tmpArr[0];
+        $queryParams = [];
+        if(isset($tmpArr[1])) {
+            parse_str($tmpArr[1], $queryParams);
+        }
+        $queryParams[$key] = $val;
+        return $hostStr . '?' . http_build_query($queryParams);
     }
 
     /**
@@ -439,38 +553,35 @@ class StringUtils
 
     /**
      * 个性化显示时间
-     *
-     * @param $timeInt
+     * @param $date
      * @param string $format
-     * @return string
+     * @return false|string
      */
-    public static function timeTran($timeInt, $format = 'Y-m-d H:i:s')
+    public static function humanTime($date, $format = 'Y-m-d H:i:s')
     {
-        $d = time() - $timeInt;
-        if ($d < 0) {
-            return $timeInt;
-        } else {
-            if ($d < 60) {
-                return $d . ' 秒前';
-            } else {
-                if ($d < 3600) {
-                    return floor($d / 60) . ' 分钟前';
-                } else {
-                    if ($d < 86400) {
-                        return floor($d / 3600) . ' 小时前';
-                    } else {
-                        if ($d < 604800) {//7天内
-                            return floor($d / 86400) . ' 天前';
-                        } else {
-                            if ($d < 2592000) {//30天内
-                                return floor($d / 604800) . ' 周前';
-                            } else {
-                                return date($format, $timeInt);
-                            }
-                        }
-                    }
+        if ($date) {
+            if (is_numeric($date)) {
+                if (mb_strlen(strval($date)) > 10) {
+                    $date = $date / 1000;//date去除毫秒精度
                 }
+                $timestamp = $date;//时间戳
+            } else {
+                $timestamp = strtotime($date);
             }
+
+            $diff = time() - $timestamp;
+            if ($diff < 600)
+                return '刚刚';
+            elseif ($diff < 3600)
+                return floor($diff / 60) . '分钟前';
+            elseif ($diff < 86400)
+                return floor($diff / 3600) . '小时前';
+            elseif ($diff < 864000)
+                return floor($diff / 86400) . '天前';
+            else
+                return date($format, $timestamp);
+        } else {
+            return '';
         }
     }
 
@@ -529,5 +640,81 @@ class StringUtils
         | [\xF1-\xF3][\x80-\xBF]{3}          # planes 4-15
         | \xF4[\x80-\x8F][\x80-\xBF]{2}      # plane 16
     )%xs', '', $str);
+    }
+
+    /**
+     * 对金额数值保留两位小数(包含：四舍五入)
+     *
+     * @param $money
+     * @return string
+     */
+    public static function formatMoney($money)
+    {
+        return sprintf("%.2f", $money);
+    }
+
+    /**
+     * 身份证验证
+     *
+     * @param $id
+     * @return bool
+     */
+    public static function isIdcard( $id )
+    {
+        $id = strtoupper($id);
+        $regx = "/(^\d{15}$)|(^\d{17}([0-9]|X)$)/";
+        $arr_split = array();
+        if(!preg_match($regx, $id))
+        {
+            return FALSE;
+        }
+        if(15==strlen($id)) //检查15位
+        {
+            $regx = "/^(\d{6})+(\d{2})+(\d{2})+(\d{2})+(\d{3})$/";
+
+            @preg_match($regx, $id, $arr_split);
+            //检查生日日期是否正确
+            $dtm_birth = "19".$arr_split[2] . '/' . $arr_split[3]. '/' .$arr_split[4];
+            if(!strtotime($dtm_birth))
+            {
+                return FALSE;
+            } else {
+                return TRUE;
+            }
+        }
+        else           //检查18位
+        {
+            $regx = "/^(\d{6})+(\d{4})+(\d{2})+(\d{2})+(\d{3})([0-9]|X)$/";
+            @preg_match($regx, $id, $arr_split);
+            $dtm_birth = $arr_split[2] . '/' . $arr_split[3]. '/' .$arr_split[4];
+            if(!strtotime($dtm_birth))  //检查生日日期是否正确
+            {
+                return FALSE;
+            }
+            else
+            {
+                //检验18位身份证的校验码是否正确。
+                //校验位按照ISO 7064:1983.MOD 11-2的规定生成，X可以认为是数字10。
+                $arr_int = array(7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2);
+                $arr_ch = array('1', '0', 'X', '9', '8', '7', '6', '5', '4', '3', '2');
+                $sign = 0;
+                for ( $i = 0; $i < 17; $i++ )
+                {
+                    $b = (int) $id{$i};
+                    $w = $arr_int[$i];
+                    $sign += $b * $w;
+                }
+                $n  = $sign % 11;
+                $val_num = $arr_ch[$n];
+                if ($val_num != substr($id,17, 1))
+                {
+                    return FALSE;
+                }
+                else
+                {
+                    return TRUE;
+                }
+            }
+        }
     }
 }
