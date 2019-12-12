@@ -717,4 +717,61 @@ class StringUtils
             }
         }
     }
+    
+    /**
+     * 匹配是否包含中文
+     *
+     * @param $content
+     * @return bool
+     */
+    public static function matchChText($content)
+    {
+        $reg='/[\x{4e00}-\x{9fa5}]/u';//匹配是否包含中文的正则表达式
+        if (preg_match($reg,$content)) {
+            return true;
+        }
+        return false;
+    }
+
+    //
+    /**
+     * 深度合并多维数组 array_merge增强
+     *
+     * @param $arr1
+     * @param $arr2
+     * @return array
+     */
+    public static function array_merge_deep($arr1, $arr2){
+        $merged	= $arr1;
+
+        foreach($arr2 as $key => &$value){
+            if(is_array($value) && isset($merged[$key]) && is_array($merged[$key])){
+                $merged[$key]	= self::array_merge_deep($merged[$key], $value);
+            }elseif(is_numeric($key)){
+                if(!in_array($value, $merged)) {
+                    $merged[]	= $value;
+                }
+            }else{
+                $merged[$key]	= $value;
+            }
+        }
+
+        return $merged;
+    }
+
+    /**
+     * 校验是否为合法的http url
+     *
+     * @param $str
+     * @return bool
+     */
+    public static function isUrl($str)
+    {
+        $reg='/^(http(s)?:\/\/)(([0-9a-z_!~*\'().&=+$%-]+: )?[0-9a-z_!~*\'().&=+$%-]+@)?(([0-9]{1,3}.){3}[0-9]{1,3}|([0-9a-z_!~*\'()-]+.)*([0-9a-z][0-9a-z-]{0,61})?[0-9a-z].[a-z]{2,6})(:[0-9]{1,4})?((\/?)|(\/[0-9a-z_!~*\'().;?:@&=+$,%#-]+)+\/?)$/i';
+        if (preg_match($reg,$str)) {
+            return true;
+        }
+        return false;
+    }
+
 }
